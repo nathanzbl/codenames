@@ -1,0 +1,51 @@
+{
+    "id": "resp_68a6a817ec1c819d9e0d4ece665d89ca0d07490ee419e3e9",
+    "object": "response",
+    "created_at": 1755752471,
+    "status": "completed",
+    "background": false,
+    "error": null,
+    "incomplete_details": null,
+    "instructions": null,
+    "max_output_tokens": null,
+    "max_tool_calls": null,
+    "model": "gpt-5-2025-08-07",
+    "output": [
+      {
+        "id": "rs_68a6a8186c70819daaa8b92580f44cc80d07490ee419e3e9",
+        "type": "reasoning",
+        "summary": []
+      },
+      {
+        "id": "msg_68a6a81a5a50819d8ecf7dbffce47df50d07490ee419e3e9",
+        "type": "message",
+        "status": "completed",
+        "content": [],
+        "role": "assistant"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "reasoning": { "effort": "medium", "summary": null },
+    "safety_identifier": null,
+    "service_tier": "auto",
+    "store": true,
+    "temperature": 1,
+    "text": { "format": { "type": "text" }, "verbosity": "medium" },
+    "tool_choice": "auto",
+    "tools": [],
+    "top_logprobs": 0,
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 17,
+      "input_tokens_details": { "cached_tokens": 0 },
+      "output_tokens": 163,
+      "output_tokens_details": { "reasoning_tokens": 128 },
+      "total_tokens": 180
+    },
+    "user": null,
+    "metadata": {},
+    "output_text": "Under a quilt of starlight, a gentle unicorn tiptoed through the whispering meadow, weaving soft rainbow dreams for every sleepy child."
+  }
