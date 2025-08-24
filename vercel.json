@@ -5,11 +5,24 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["dist/**"]
+        "includeFiles": [
+          "dist/**"
+        ]
       }
     }
   ],
   "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/dist/client/assets/$1"
+    },
+    {
+      "src": "/(.*\\.(css|js|svg|ico|png|jpg|jpeg|gif))",
+      "dest": "/dist/client/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "server.js"

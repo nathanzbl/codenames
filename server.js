@@ -8,7 +8,6 @@ import OpenAI from "openai";
 // --- Environment Setup ---
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === 'production';
-const root = process.cwd();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,7 +20,6 @@ const GAME_TTL_MS = 1000 * 60 * 60 * 6;
 app.use(express.json());
 
 // --- Helper Functions (shuffle, generateTypes, schemas) ---
-// (These functions are unchanged and are omitted for brevity, but should be kept in your file)
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -48,21 +46,18 @@ async function startServer() {
   let vite;
   if (!isProd) {
     // --- DEVELOPMENT MODE ---
-    // In development, create the Vite server and use its middleware.
     vite = await (await import('vite')).createServer({
       server: { middlewareMode: true },
       appType: "custom",
-      root,
+      root: __dirname,
     });
     app.use(vite.middlewares);
   } else {
     // --- PRODUCTION MODE ---
-    // In production, serve pre-built static assets from the 'dist/client' folder.
-    app.use(express.static(path.resolve(root, 'dist/client'), { index: false }));
+    app.use(express.static(path.join(__dirname, 'dist/client'), { index: false }));
   }
 
-  // --- API Endpoints (Unchanged) ---
-  // (Your app.post('/game/new'), app.post('/game/:id/hint'), etc. go here)
+  // --- API Endpoints ---
   app.post("/game/new", async (req, res) => {
     try {
       const { aiTeam } = req.body;
@@ -75,7 +70,7 @@ async function startServer() {
         temperature: 1.5
         
       });
-      const payload = JSON.parse(words1.output_text)
+      const payload = JSON.parse(wordsResponse.choices[0].message.content);
       const words = payload.words;
       const { types, startingPlayer } = generateTypes();
       const id = "g_" + Math.random().toString(36).slice(2);
@@ -107,14 +102,13 @@ async function startServer() {
   app.get("/game/:id", (req, res) => { const g = games.get(req.params.id); if (g) res.json(g); else res.status(404).json({ error: "not found" }); });
   app.get("/game/:id/spymaster/:team", (req, res) => { const g = games.get(req.params.id); if (!g) return res.status(404).json({ error: "not found" }); const team = req.params.team; const spymasterTypes = g.types.map(t => (t === team || t === 'assassin' || t === 'neutral') ? t : 'neutral'); res.json({ id: g.id, words: g.words, types: spymasterTypes, team }); });
 
-
-  // --- SSR Handler (for both Prod and Dev) ---
+  // --- SSR Handler ---
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
       const templatePath = isProd
-        ? path.resolve(root, 'dist/client/index.html')
-        : path.resolve(root, 'client/index.html');
+        ? path.join(__dirname, 'dist/client/index.html')
+        : path.join(__dirname, 'client/index.html');
       
       let template = fs.readFileSync(templatePath, "utf-8");
       let render;
@@ -124,8 +118,7 @@ async function startServer() {
         const serverEntry = await vite.ssrLoadModule("/client/entry-server.jsx");
         render = serverEntry.render;
       } else {
-        // On Vercel, the path needs to be adjusted for the serverless environment
-        const serverEntryPath = path.resolve(root, 'dist/server/entry-server.js');
+        const serverEntryPath = path.join(__dirname, 'dist/server/entry-server.js');
         const serverEntry = await import(serverEntryPath);
         render = serverEntry.render;
       }
