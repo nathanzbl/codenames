@@ -3,6 +3,10 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import "dotenv/config";
 import OpenAI from "openai";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -143,6 +147,60 @@ app.get("/game/:id", (req, res) => {
   if (!g || isExpired(g)) return res.status(404).json({ error: "not found" });
   res.json(g);
 });
+app.post("/game/:id/hint", async (req, res) => {
+  const g = games.get(req.params.id);
+  if (!g || isExpired(g)) return res.status(404).json({ error: "not found" });
+
+  const { team, words, types, revealed } = req.body;
+  const opponentTeam = team === 'blue' ? 'red' : 'blue';
+
+  const boardState = words.map((word, i) => ({
+    word,
+    type: types[i],
+    revealed: revealed[i],
+  }));
+
+  const myWords = boardState.filter(c => c.type === team && !c.revealed).map(c => c.word);
+  const opponentWords = boardState.filter(c => c.type === opponentTeam && !c.revealed).map(c => c.word);
+  const neutralWords = boardState.filter(c => c.type === 'neutral' && !c.revealed).map(c => c.word);
+  const assassinWord = boardState.find(c => c.type === 'assassin' && !c.revealed)?.word;
+
+  const prompt = `
+    You are the spymaster for the ${team} team in the game Codenames.
+    Your goal is to provide a single-word clue and a number to get your teammates to guess your team's words.
+
+    RULES:
+    1. The clue must be a single word.
+    2. The clue cannot be any of the words currently on the board (revealed or not).
+    3. The number indicates how many of YOUR team's words relate to your clue.
+
+    GAME STATE:
+    - Your team's remaining words are: ${myWords.join(", ")}
+    - Opponent's remaining words are: ${opponentWords.join(", ")}
+    - Neutral words are: ${neutralWords.join(", ")}
+    - The assassin word is: ${assassinWord}
+
+    TASK:
+    Analyze your words and find a creative link between two or more of them.
+    Prioritize clues that cover more words, but BE EXTREMELY CAREFUL to avoid clues that could lead your team to guess the opponent's words, a neutral word, or especially the assassin word. A safe, 2-word clue is better than a risky 4-word clue.
+
+    Return your answer in JSON format.
+  `;
+
+  try {
+    const hintResponse = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object", schema: hintSchema },
+    });
+    const hintPayload = JSON.parse(hintResponse.choices[0].message.content);
+    res.json(hintPayload);
+  } catch (err) {
+    console.error("AI hint error:", err);
+    res.status(500).json({ error: "Failed to get AI hint" });
+  }
+});
+
 
 // Spymaster view - masks opponent as neutral, always shows assassin
 app.get("/game/:id/spymaster/:team", (req, res) => {
@@ -171,10 +229,8 @@ setInterval(() => {
 app.use("*", async (req, res, next) => {
   const url = req.originalUrl;
   try {
-    const template = await vite.transformIndexHtml(
-      url,
-      fs.readFileSync("./client/index.html", "utf-8"),
-    );
+    const templatePath = path.resolve(__dirname, 'client/index.html');
+    const template = await vite.transformIndexHtml(url,fs.readFileSync(templatePath, "utf-8"),);
     const { render } = await vite.ssrLoadModule("./client/entry-server.jsx");
     const appHtml = await render(url);
     const html = template.replace(`<!--ssr-outlet-->`, appHtml?.html);
