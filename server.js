@@ -66,11 +66,11 @@ async function startServer() {
         model: "gpt-4o-mini",
         input:
           "Return exactly 25 unique and interesting one-word entries that an 12th grader could understand. Lowercase ASCII only. return as a JSON format with a single key 'words' and an array of words as the value. have the output be all on one line",
-        text: { format: { "type": "json_schema", "name": "codenames_words", "schema": schema}},
+        text: { format: { "type": "json_schema", "name": "codenames_words", "schema": wordsSchema}},
         temperature: 1.5
         
       });
-      const payload = JSON.parse(wordsResponse.choices[0].message.content);
+      const payload = JSON.parse(words1.choices[0].message.content);
       const words = payload.words;
       const { types, startingPlayer } = generateTypes();
       const id = "g_" + Math.random().toString(36).slice(2);
