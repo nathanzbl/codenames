@@ -5,6 +5,6 @@ import react from "@vitejs/plugin-react";
 const path = fileURLToPath(import.meta.url);
 
 export default {
-  root: join(dirname(path), "client"),
+  root: join(dirname(path),),
   plugins: [react()],
 };

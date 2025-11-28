@@ -17,6 +17,20 @@ const client = new OpenAI({ apiKey });
 const games = new Map();
 const GAME_TTL_MS = 1000 * 60 * 60 * 6;
 
+function cleanupGames() {
+  const now = Date.now();
+  for (const [id, game] of games.entries()) {
+    if (now - game.createdAt > GAME_TTL_MS) {
+      games.delete(id);
+      console.log(`Deleted expired game: ${id}`);
+    }
+  }
+}
+
+// Run cleanup every 1 hour (so you don't check too often)
+setInterval(cleanupGames, 1000 * 60 * 60);
+// --- MEMORY LEAK FIX END ---
+
 app.use(express.json());
 
 // --- Helper Functions (shuffle, generateTypes, schemas) ---
@@ -65,12 +79,20 @@ async function startServer() {
         // Use a model that actually supports text.format structured outputs
         model: "gpt-4o-mini",
         input:
-          "Return exactly 25 unique and interesting one-word entries that an 12th grader could understand. Lowercase ASCII only. return as a JSON format with a single key 'words' and an array of words as the value. have the output be all on one line",
+          `Generate a list of 25 Codenames-style words. Follow these rules:
+Single words only. No phrases, no hyphens.
+Concrete nouns preferred. Avoid abstract concepts (no “justice,” “freedom,” etc.).
+Each word must have multiple meanings or be interpretable in different contexts.
+No proper nouns unless they are extremely common and not tied to a specific person or brand (good: “Amazon,” “Mercury.” Bad: “Einstein,” “Nike”).
+No offensive or adult content.
+Mix physical objects, animals, locations, occupations, and ambiguous nouns.
+Return the final output as a numbered list of 25 words only with no explanation.`,
         text: { format: { "type": "json_schema", "name": "codenames_words", "schema": wordsSchema}},
         temperature: 1.5
         
       });
-      const payload = JSON.parse(words1.choices[0].message.content);
+      console.log("words response:", words1.output_text);
+      const payload = JSON.parse(words1.output_text);
       const words = payload.words;
       const { types, startingPlayer } = generateTypes();
       const id = "g_" + Math.random().toString(36).slice(2);
@@ -103,7 +125,7 @@ async function startServer() {
   app.get("/game/:id/spymaster/:team", (req, res) => { const g = games.get(req.params.id); if (!g) return res.status(404).json({ error: "not found" }); const team = req.params.team; const spymasterTypes = g.types.map(t => (t === team || t === 'assassin' || t === 'neutral') ? t : 'neutral'); res.json({ id: g.id, words: g.words, types: spymasterTypes, team }); });
 
   // --- SSR Handler ---
-  app.use("*", async (req, res, next) => {
+  app.use("/", async (req, res, next) => {
     const url = req.originalUrl;
     try {
       const templatePath = isProd
@@ -115,7 +137,7 @@ async function startServer() {
 
       if (!isProd) {
         template = await vite.transformIndexHtml(url, template);
-        const serverEntry = await vite.ssrLoadModule("/client/entry-server.jsx");
+        const serverEntry = await vite.ssrLoadModule("client/entry-server.jsx");
         render = serverEntry.render;
       } else {
         const serverEntryPath = path.join(__dirname, 'dist/server/entry-server.js');

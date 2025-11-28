@@ -10,12 +10,12 @@ function Card({ word, type, isRevealed, onReveal }) {
     assassin: "bg-black text-white shadow-2xl scale-105",
   };
   const unrevealed =
-    "bg-yellow-100 hover:bg-yellow-200 text-gray-800 border-2 border-yellow-300 hover:scale-105";
+    "bg-yellow-100 p-8 hover:bg-yellow-200 text-gray-800 border-2 border-yellow-300 hover:scale-105";
   const cls = isRevealed ? `${base} ${revealed[type]}` : `${base} ${unrevealed}`;
 
   return (
     <div className={cls} onClick={onReveal}>
-      <span className="text-sm sm:text-base font-bold uppercase tracking-wider p-2 text-center">
+      <span className="text-sm sm:text-base font-bold uppercase tracking-wider p-8 text-center">
         {word}
       </span>
     </div>
@@ -50,7 +50,7 @@ export default function CodenamesBoard({ words = [], types = [] }) {
   }
 
   return (
-    <div className="grid grid-cols-5 gap-3 sm:gap-4 w-full max-w-2xl mx-auto">
+    <div className="grid grid-cols-5 gap-5  sm:gap-4 w-full max-w-2xl mx-auto">
       {cards.map((card) => (
         <Card
           key={card.id}
@@ -61,5 +61,8 @@ export default function CodenamesBoard({ words = [], types = [] }) {
         />
       ))}
     </div>
+    
+
+    
   );
 }
