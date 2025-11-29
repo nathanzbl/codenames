@@ -137,11 +137,13 @@ async function startServer() {
         model: "gpt-4o-mini",
         input:
           `Generate a list of 25 Codenames-style words. Follow these rules:
+          Make them all adult themes and content, sex, drugs, violence, etc are allowed as all players are adults.
+          USE CITIES, COUNTRIES, AND BRANDS AS NEEDED.
 Single words only. No phrases, no hyphens.
 Concrete nouns preferred. Avoid abstract concepts (no “justice,” “freedom,” etc.).
 Each word must have multiple meanings or be interpretable in different contexts.
-No proper nouns unless they are extremely common and not tied to a specific person or brand (good: “Amazon,” “Mercury.” Bad: “Einstein,” “Nike”).
-No offensive or adult content.
+No proper nouns unless they are extremely common and tied to a specific person or brand (good: “Amazon,” “Mercury", "Barcelona","Salt Lake City", "Nike","OpenAI","ChatGPT").
+offensive or adult content is allowed, all players are adults.
 Mix physical objects, animals, locations, occupations, and ambiguous nouns.
 Return the final output as a numbered list of 25 words only with no explanation.`,
         text: { format: { "type": "json_schema", "name": "codenames_words", "schema": wordsSchema}},
@@ -176,14 +178,33 @@ Return the final output as a numbered list of 25 words only with no explanation.
     const assassinWord = boardState.find(c => c.type === 'assassin' && !c.revealed)?.word;
     const prompt = `You are the spymaster for the ${team} team... Your team's words are: ${myWords.join(", ")}. Opponent's words are: ${opponentWords.join(", ")}. Neutral words are: ${neutralWords.join(", ")}. The assassin is: ${assassinWord}. Return JSON.`;
     try {
-      const hintResponse = await client.chat.completions.create({ model: "gpt-4o", messages: [{ role: "user", content: prompt }], response_format: { type: "json_object", schema: hintSchema }});
-      const hintPayload = JSON.parse(hintResponse.choices[0].message.content);
+      const hintResponse = await client.responses.create({
+        model: "gpt-4o",
+        input: prompt,
+        text: { format: { type: "json_schema", name: "codenames_hint", schema: hintSchema } }
+      });
+      const hintPayload = JSON.parse(hintResponse.output_text);
       res.json(hintPayload);
     } catch (err) { console.error("AI hint error:", err); res.status(500).json({ error: "Failed to get AI hint" }); }
   });
 
-  app.get("/game/:id", (req, res) => { const g = games.get(req.params.id); if (g) res.json(g); else res.status(404).json({ error: "not found" }); });
-  app.get("/game/:id/spymaster/:team", (req, res) => { const g = games.get(req.params.id); if (!g) return res.status(404).json({ error: "not found" }); const team = req.params.team; const spymasterTypes = g.types.map(t => (t === team || t === 'assassin' || t === 'neutral') ? t : 'neutral'); res.json({ id: g.id, words: g.words, types: spymasterTypes, team }); });
+  app.get("/game/:id", (req, res) => {
+    const g = games.get(req.params.id);
+    if (g) res.json(g);
+    else res.status(404).json({ error: "not found" });
+  });
+
+  app.get("/game/:id/spymaster/:team", (req, res) => {
+    const g = games.get(req.params.id);
+    if (!g) return res.status(404).json({ error: "not found" });
+
+    const team = req.params.team;
+    const spymasterTypes = g.types.map(t =>
+      (t === team || t === 'assassin' || t === 'neutral') ? t : 'neutral'
+    );
+
+    res.json({ id: g.id, words: g.words, types: spymasterTypes, team });
+  });
 
   // --- SSR Handler ---
   app.use("/", async (req, res, next) => {
