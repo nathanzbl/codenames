@@ -15,7 +15,7 @@ const isProd = process.env.NODE_ENV === 'production';
 const pool = new Pool({
   // Make sure DATABASE_URL is in your .env file
   connectionString: process.env.DATABASE_URL,
-  ssl: isProd ? { rejectUnauthorized: false } : false 
+  
 });
 
 const app = express();
@@ -78,6 +78,7 @@ async function startServer() {
   } else {
     // --- PRODUCTION MODE ---
     app.use(express.static(path.join(__dirname, 'dist/client'), { index: false }));
+    console.log("Production mode: serving static files from /dist/client");
   }
 
   // ==========================================
